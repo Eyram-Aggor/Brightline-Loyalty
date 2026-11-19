@@ -1,5 +1,8 @@
 package com.brightline.loyalty;
 
+import com.brightline.loyalty.exceptions.InvalidPurchaseException;
+import com.brightline.loyalty.exceptions.LoyaltyException;
+import com.brightline.loyalty.purchase.Purchase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;

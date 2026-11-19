@@ -1,4 +1,6 @@
-package com.brightline.loyalty;
+package com.brightline.loyalty.purchase;
+
+import com.brightline.loyalty.exceptions.InvalidPurchaseException;
 
 import java.math.BigDecimal;
 

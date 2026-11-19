@@ -1,4 +1,4 @@
-package com.brightline.loyalty;
+package com.brightline.loyalty.exceptions;
 
 
 public abstract class LoyaltyException extends RuntimeException {

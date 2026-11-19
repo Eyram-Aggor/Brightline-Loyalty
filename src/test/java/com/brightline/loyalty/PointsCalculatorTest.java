@@ -1,5 +1,6 @@
 package com.brightline.loyalty;
 
+import com.brightline.loyalty.points.PointsCalculator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
