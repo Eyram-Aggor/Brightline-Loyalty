@@ -1,49 +1,48 @@
 package com.brightline.loyalty.points;
 
-import com.brightline.loyalty.exceptions.MemberNotFoundException;
-import com.brightline.loyalty.member.InMemoryMemberRepository;
 import com.brightline.loyalty.member.Member;
-import com.brightline.loyalty.member.MemberRepository;
-import com.brightline.loyalty.member.Tier;
+import com.brightline.loyalty.purchase.Purchase;
+import com.brightline.loyalty.rules.BonusRule;
+import com.brightline.loyalty.rules.TierRules;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
-public class PointsCalculator {
+/**
+ * Calculates the points a member earns on a purchase.
+ * Pure calculation: no lookup, no I/O, no error hiding.
+ */
+public final class PointsCalculator {
 
-    // The calculator makes its own repository. Convenient, but it means callers
-    // and tests cannot give it a different one.
-    private final MemberRepository repository = new InMemoryMemberRepository(List.of(
-            new Member("m1", "Kofi Mensah", Tier.STANDARD),
-            new Member("m2", "Ama Owusu", Tier.GOLD),
-            new Member("m3", "Yaa Boateng", Tier.SILVER)));
+    /** One base point is earned for every GHS 10 spent; partial units earn nothing. */
+    private static final BigDecimal GHS_PER_BASE_POINT = BigDecimal.TEN;
 
-    public int calculatePoints(String memberId, double amount) {
-        try {
-            Member member = repository.findById(memberId)
-                    .orElseThrow(() -> new MemberNotFoundException(memberId));
+    private final TierRules tierRules;
+    private final List<BonusRule> bonusRules;
 
-            // base points: one point for every GHS 10 spent
-            int points = (int) (amount / 10);
+    public PointsCalculator(TierRules tierRules, Collection<? extends BonusRule> bonusRules) {
+        this.tierRules = Objects.requireNonNull(tierRules, "tierRules must not be null");
+        this.bonusRules = List.copyOf(Objects.requireNonNull(bonusRules, "bonusRules must not be null"));
+    }
 
-            // apply the member's tier multiplier
-            if (member.tier() == Tier.STANDARD) {
-                points = points * 1;
-            } else if (member.tier() == Tier.SILVER) {
-                points = (int) (points * 1.5);
-            } else if (member.tier() == Tier.GOLD) {
-                points = points * 2;
-            }
+    /**
+     * Base points, then the member's tier rule, then every bonus rule.
+     * Bonuses are added after the tier rule, so they are not multiplied.
+     */
+    public int calculate(Member member, Purchase purchase) {
+        Objects.requireNonNull(member, "member must not be null");
+        Objects.requireNonNull(purchase, "purchase must not be null");
 
-            // loyalty bonus for big spenders
-            if (amount > 500) {
-                points = points + 50;
-            }
-
-            System.out.println("Awarded " + points + " points to " + member.name());
-            return points;
-        } catch (Exception e) {
-            // something went wrong (for example the member was not found) - award nothing
-            return 0;
+        int basePoints = purchase.amount()
+                .divide(GHS_PER_BASE_POINT, 0, RoundingMode.DOWN)
+                .intValueExact();
+        int points = tierRules.ruleFor(member.tier()).apply(basePoints);
+        for (BonusRule bonusRule : bonusRules) {
+            points = Math.addExact(points, bonusRule.bonusFor(purchase));
         }
+        return points;
     }
 }
